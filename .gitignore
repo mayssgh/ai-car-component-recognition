@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+
+# Node / Expo
+node_modules/
+.expo/
+dist/
+build/
+
+# AI weights (too large for GitHub)
+backend/app/ai/weights/*.pt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
