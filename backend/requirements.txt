@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+python-multipart
+supabase
+python-jose[cryptography]
+passlib[bcrypt]
+pydantic
+pydantic-settings
+pillow
+opencv-python
+torch
+torchvision
+ultralytics
+python-dotenv
+httpx
