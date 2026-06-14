@@ -1,239 +1,364 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "../../services/supabase/client";
+import {
+  View, Text, TextInput, TouchableOpacity,
+  StyleSheet, KeyboardAvoidingView, Platform,
+  ScrollView, ActivityIndicator
+} from 'react-native'
+import { useState } from 'react'
+import { useRouter } from 'expo-router'
+import { authService } from '../../services/auth.service'
+import { Colors } from '../../constants/colors'
 
-export default function Register() {
-  const navigate = useNavigate();
+export default function RegisterScreen() {
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const handleRegister = async () => {
+    setError(null)
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleRegister = async (e) => {
-    e.preventDefault();
-
-    setError("");
-
+    if (!fullName || !email || !password || !confirmPassword) {
+      setError('Please fill in all fields')
+      return
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
+    }
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
+      setError('Passwords do not match')
+      return
     }
 
-    setLoading(true);
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
-    });
-
-    setLoading(false);
-
-    if (error) {
-      setError(error.message);
-      return;
+    try {
+      setLoading(true)
+      const { error } = await authService.register(email, password, fullName)
+      if (error) throw error
+      router.replace('/tabs/scan')
+    } catch (e: any) {
+      setError(e.message || 'Registration failed. Please try again.')
+    } finally {
+      setLoading(false)
     }
-
-    navigate("/auth/login");
-  };
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#122b2f] text-[#e5e2dd] px-4 relative overflow-hidden">
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Background blobs */}
+        <View style={styles.blobTopLeft} />
+        <View style={styles.blobBottomRight} />
 
-      {/* Background Atmosphere */}
-      <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full"></div>
+        {/* Brand */}
+        <View style={styles.brandSection}>
+          <View style={styles.logoBox}>
+            <Text style={styles.logoIcon}>📷</Text>
+          </View>
+          <Text style={styles.brandName}>BakoVision</Text>
+          <Text style={styles.brandTagline}>Next-gen Automotive Intelligence</Text>
+        </View>
 
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-green-500/10 blur-[120px] rounded-full"></div>
-      </div>
+        {/* Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Initialize Account</Text>
+            <Text style={styles.cardSubtitle}>Enter your credentials to begin.</Text>
+          </View>
 
-      <main className="w-full max-w-[480px] z-10">
-
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-10 space-y-4">
-
-          <div className="w-16 h-16 rounded-2xl bg-[#2a5fab] flex items-center justify-center shadow-[0_0_30px_rgba(42,95,171,0.3)]">
-            <span className="text-white text-4xl">
-              📷
-            </span>
-          </div>
-
-          <div className="text-center">
-            <h1 className="text-5xl font-bold tracking-tight mb-1">
-              BakoVision
-            </h1>
-
-            <p className="text-gray-300 tracking-wide">
-              Next-gen Automotive Intelligence
-            </p>
-          </div>
-        </div>
-
-        {/* Registration Card */}
-        <section className="backdrop-blur-xl bg-[#2d4c4e]/70 border border-white/10 rounded-3xl p-8 md:p-10 shadow-2xl">
-
-          <header className="mb-8">
-            <h2 className="text-3xl font-semibold">
-              Initialize Account
-            </h2>
-
-            <p className="text-gray-300 mt-2">
-              Enter your technical credentials to begin.
-            </p>
-          </header>
-
-          <form
-            onSubmit={handleRegister}
-            className="space-y-6"
-          >
-
-            {/* Full Name */}
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-wider text-gray-300">
-                Full Name
-              </label>
-
-              <input
-                type="text"
-                placeholder="John Doe"
+          {/* Full Name */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>👤  FULL NAME</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="Johnathan Doe"
+                placeholderTextColor="rgba(194,199,201,0.3)"
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full bg-[#2d4c4e]/50 border border-white/10 rounded-xl px-4 py-4 text-white outline-none focus:ring-2 focus:ring-blue-500"
-                required
+                onChangeText={setFullName}
+                autoCapitalize="words"
+                autoComplete="name"
               />
-            </div>
+            </View>
+          </View>
 
-            {/* Email */}
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-wider text-gray-300">
-                Email Address
-              </label>
-
-              <input
-                type="email"
-                placeholder="engineer@bakovision.ai"
+          {/* Email */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>✉️  EMAIL ADDRESS</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="engineer@fleet.bakovision.com"
+                placeholderTextColor="rgba(194,199,201,0.3)"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-[#2d4c4e]/50 border border-white/10 rounded-xl px-4 py-4 text-white outline-none focus:ring-2 focus:ring-blue-500"
-                required
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
               />
-            </div>
+            </View>
+          </View>
 
-            {/* Password Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Password */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>🔒  PASSWORD</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                placeholderTextColor="rgba(194,199,201,0.3)"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoComplete="new-password"
+              />
+            </View>
+          </View>
 
-              {/* Password */}
-              <div className="space-y-2">
-                <label className="text-xs uppercase tracking-wider text-gray-300">
-                  Password
-                </label>
+          {/* Confirm Password */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>✅  CONFIRM PASSWORD</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                placeholderTextColor="rgba(194,199,201,0.3)"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+                autoComplete="new-password"
+              />
+            </View>
+          </View>
 
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-[#2d4c4e]/50 border border-white/10 rounded-xl px-4 py-4 text-white outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
+          {/* Error */}
+          {error && <Text style={styles.error}>{error}</Text>}
 
-              {/* Confirm */}
-              <div className="space-y-2">
-                <label className="text-xs uppercase tracking-wider text-gray-300">
-                  Confirm
-                </label>
-
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) =>
-                    setConfirmPassword(e.target.value)
-                  }
-                  className="w-full bg-[#2d4c4e]/50 border border-white/10 rounded-xl px-4 py-4 text-white outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Error */}
-            {error && (
-              <p className="text-red-400 text-sm">
-                {error}
-              </p>
+          {/* Submit */}
+          <TouchableOpacity
+            style={[styles.primaryButton, loading && styles.disabled]}
+            onPress={handleRegister}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            {loading ? (
+              <ActivityIndicator color="#ecece4" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Create Account →</Text>
             )}
+          </TouchableOpacity>
 
-            {/* Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#2a5fab] hover:bg-blue-700 text-white py-4 rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-3 font-semibold"
-            >
-              {loading ? "Creating Account..." : "Create Account"}
-            </button>
+          {/* Divider */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>SECURE ENCRYPTED HANDSHAKE</Text>
+            <View style={styles.dividerLine} />
+          </View>
 
-          </form>
+          {/* Login Link */}
+          <TouchableOpacity
+            style={styles.loginLink}
+            onPress={() => router.push('/auth/login')}
+          >
+            <Text style={styles.loginLinkText}>
+              Already part of the fleet?{' '}
+              <Text style={styles.linkText}>Log in</Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-          {/* Footer */}
-          <footer className="mt-8 pt-6 border-t border-white/10 flex flex-col items-center space-y-4">
-
-            <p className="text-gray-300">
-              Already part of the fleet?
-
-              <button
-                onClick={() => navigate("/auth/login")}
-                className="text-blue-400 font-bold ml-2 hover:underline"
-              >
-                Log in
-              </button>
-            </p>
-
-            <div className="flex items-center gap-4 text-gray-500">
-              <span className="h-px w-8 bg-current"></span>
-
-              <span className="text-xs tracking-wider">
-                SECURE ENCRYPTED HANDSHAKE
-              </span>
-
-              <span className="h-px w-8 bg-current"></span>
-            </div>
-
-          </footer>
-        </section>
-
-        {/* Decorative Card */}
-        <div className="mt-8 opacity-60 hover:opacity-100 transition-opacity duration-700">
-          <div className="relative h-24 rounded-2xl overflow-hidden">
-
-            <img
-              className="w-full h-full object-cover"
-              src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1200&auto=format&fit=crop"
-              alt="Automotive AI"
-            />
-
-            <div className="absolute inset-0 bg-gradient-to-t from-[#122b2f] to-transparent"></div>
-
-            <div className="absolute bottom-3 left-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-
-              <span className="text-xs text-white tracking-wider">
-                SYSTEM STATUS: READY FOR LINK
-              </span>
-            </div>
-
-          </div>
-        </div>
-
-      </main>
-    </div>
-  );
+      </ScrollView>
+    </KeyboardAvoidingView>
+  )
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#122b2f',
+  },
+  scroll: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    paddingVertical: 48,
+  },
+
+  // Blobs
+  blobTopLeft: {
+    position: 'absolute',
+    top: -80,
+    left: -80,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: 'rgba(42, 95, 171, 0.08)',
+  },
+  blobBottomRight: {
+    position: 'absolute',
+    bottom: -80,
+    right: -80,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: 'rgba(4, 46, 26, 0.15)',
+  },
+
+  // Brand
+  brandSection: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  logoBox: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: '#2a5fab',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    shadowColor: '#2a5fab',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  logoIcon: {
+    fontSize: 28,
+  },
+  brandName: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#e5e2dd',
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  brandTagline: {
+    fontSize: 14,
+    color: 'rgba(194, 199, 201, 0.8)',
+    letterSpacing: 0.5,
+  },
+
+  // Card
+  card: {
+    width: '100%',
+    maxWidth: 480,
+    backgroundColor: 'rgba(45, 76, 78, 0.7)',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(236, 236, 228, 0.1)',
+    padding: 32,
+  },
+  cardHeader: {
+    marginBottom: 28,
+  },
+  cardTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#e5e2dd',
+    marginBottom: 6,
+  },
+  cardSubtitle: {
+    fontSize: 14,
+    color: '#c2c7c9',
+  },
+
+  // Fields
+  fieldGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 1.2,
+    color: '#c2c7c9',
+    marginBottom: 6,
+    marginLeft: 2,
+  },
+  inputWrapper: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(230, 232, 231, 0.2)',
+    backgroundColor: 'rgba(45, 76, 78, 0.5)',
+    overflow: 'hidden',
+  },
+  input: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 14,
+    color: '#e5e2dd',
+  },
+
+  // Error
+  error: {
+    color: Colors.danger,
+    fontSize: 13,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+
+  // Button
+  primaryButton: {
+    backgroundColor: '#2a5fab',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    minHeight: 52,
+    shadowColor: '#2a5fab',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  primaryButtonText: {
+    color: '#ecece4',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  disabled: {
+    opacity: 0.6,
+  },
+
+  // Divider
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(236, 236, 228, 0.1)',
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 1.5,
+    color: 'rgba(194, 199, 201, 0.4)',
+  },
+
+  // Login link
+  loginLink: {
+    alignItems: 'center',
+  },
+  loginLinkText: {
+    fontSize: 14,
+    color: '#c2c7c9',
+  },
+  linkText: {
+    color: '#2a5fab',
+    fontWeight: '700',
+  },
+})
