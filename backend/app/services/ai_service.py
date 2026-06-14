@@ -1,29 +1,13 @@
-# Scaffold for Khadija to fill
-# This wraps the AI pipeline so the scan route stays clean
+from app.ai.models.pipeline import run_pipeline as _run_pipeline
 
 def run_pipeline(image_bytes: bytes) -> list:
-    """
-    Takes raw image bytes, runs detection + classification.
-    Returns list of:
-    [
-        {
-            "component_name": "Alternator",
-            "confidence": 0.92,
-            "bbox": [x1, y1, x2, y2]
-        }
-    ]
-    Khadija: import and call your pipeline here
-    """
-    # TODO: Khadija fills this
-    # from app.ai.models.pipeline import CarComponentPipeline
-    # pipeline = CarComponentPipeline()
-    # return pipeline.predict(image_bytes)
-
-    # Placeholder response until AI is ready
-    return [
-        {
-            "component_name": "Alternator",
-            "confidence": 0.91,
-            "bbox": [100, 150, 300, 350]
-        }
-    ]
+    try:
+        return _run_pipeline(image_bytes)
+    except Exception as e:
+        print(f"AI Pipeline error: {e}")
+        # Fallback placeholder until model is trained
+        return [{
+            "component_name": "Unknown",
+            "confidence": 0.0,
+            "bbox": []
+        }]
