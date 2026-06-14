@@ -6,16 +6,9 @@ import io
 import os
 
 CLASS_NAMES = [
-    "Alternator",
-    "Brake Caliper",
-    "Catalytic Converter",
-    "Fuel Injector",
-    "Radiator",
-    "Serpentine Belt",
-    "Shock Absorber",
-    "Timing Belt",
-    "Turbocharger",
-    "Water Pump"
+    "Cooling_Fan",
+    "Motor_Controller",
+    "Brake_Component"
 ]
 
 class CarComponentClassifier:
@@ -32,7 +25,7 @@ class CarComponentClassifier:
         ])
 
     def _load_model(self):
-        model = models.mobilenet_v3_large(pretrained=False)
+        model = models.mobilenet_v3_large(weights=None)
         model.classifier[3] = torch.nn.Linear(
             model.classifier[3].in_features,
             len(CLASS_NAMES)
@@ -45,9 +38,9 @@ class CarComponentClassifier:
             model.load_state_dict(
                 torch.load(weights_path, map_location=self.device)
             )
-            print("✅ Classifier weights loaded")
+            print("Classifier weights loaded")
         else:
-            print("⚠️ No classifier weights found — using random weights")
+            print("No weights found - training from scratch")
 
         model.to(self.device)
         model.eval()

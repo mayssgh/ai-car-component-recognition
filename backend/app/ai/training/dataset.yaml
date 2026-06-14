@@ -1,0 +1,5 @@
+path: C:\Users\MayssaGhabarou\ai-car-component-recognition\backend\app\ai\training\dataset
+train: .
+val: .
+nc: 3
+names: ['Cooling_Fan', 'Motor_Controller', 'Brake_Component']
