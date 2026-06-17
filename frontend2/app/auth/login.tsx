@@ -1,7 +1,7 @@
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
-  ScrollView, ActivityIndicator
+  ScrollView, ActivityIndicator,
 } from 'react-native'
 import { useState } from 'react'
 import { useRouter } from 'expo-router'

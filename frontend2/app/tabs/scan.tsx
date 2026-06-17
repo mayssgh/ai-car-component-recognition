@@ -56,7 +56,29 @@ export default function ScanScreen() {
       ])
     ).start()
   }, [])
+  const uploadImage = async (imageUri) => {
+  const formData = new FormData();
+  formData.append('file', {
+    uri: imageUri,
+    name: 'photo.jpg',
+    type: 'image/jpeg',
+  });
 
+  try {
+    const response = await fetch('http://localhost:8000/api/inference/predict', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    const result = await response.json();
+    console.log("Prediction:", result);
+    // Update your state here to show the component name to the user
+  } catch (error) {
+    console.error("Upload failed:", error);
+  }
+};
   const scanLineY = scanAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [0, 240],
