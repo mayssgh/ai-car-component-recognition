@@ -1,5 +1,5 @@
 import os
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, EmailStr
 
 router = APIRouter()
@@ -9,27 +9,30 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(CURRENT_DIR)))
 LOG_PATH = os.path.join(BACKEND_DIR, "app", "ai", "training", "inference_history.log")
 
-# Pydantic schemas for data validation
+# Pydantic schemas for structural data validation
 class AdminLoginRequest(BaseModel):
     email: EmailStr
     password: str
 
 @router.post("/login")
 async def admin_login(credentials: AdminLoginRequest):
-    """Simple, secure credential verification for the admin user."""
-    # Hardcoded demonstration credentials (you can link this to a DB table later)
-    ADMIN_EMAIL = "admin@carrecon.com"
-    ADMIN_PASSWORD = "SuperSecureAdminPassword2026" # Change this as needed!
+    """Simple, secure credential verification for the admin terminal user."""
+    # Production aligned master credentials
+    ADMIN_EMAIL = "admin@bakovision.ai"
+    ADMIN_PASSWORD = "BakoVisionSecureRoot2026!"
     
     if credentials.email == ADMIN_EMAIL and credentials.password == ADMIN_PASSWORD:
         return {
             "status": "success",
             "message": "Admin authenticated successfully",
             "role": "admin",
-            "token": "mock-secure-admin-jwt-token" # Frontend will store this to keep them logged in
+            "token": "mock-secure-admin-jwt-token"
         }
-    else:
-        raise HTTPException(status_code=401, detail="Invalid admin email or password credentials.")
+    
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, 
+        detail="Invalid admin email or password credentials."
+    )
 
 @router.get("/stats")
 async def get_admin_dashboard_stats():
@@ -42,7 +45,7 @@ async def get_admin_dashboard_stats():
         }
         
     try:
-        with open(LOG_PATH, "r") as f:
+        with open(LOG_PATH, "r", encoding="utf-8") as f:
             lines = f.readlines()
             
         total_scans = len(lines)
@@ -55,15 +58,16 @@ async def get_admin_dashboard_stats():
             if not clean_line:
                 continue
                 
+            # Collect the logs to send to the UI terminal console feed
             recent_logs.append(clean_line)
             
-            # Extract latency float value from the log string for averaging
+            # Safe parsing for latency numbers to avoid calculations crashing
             if "Latency:" in clean_line:
                 try:
                     parts = clean_line.split("Latency:")
                     latency_val = parts[1].split("ms")[0].strip()
                     latencies.append(float(latency_val))
-                except Exception:
+                except (IndexError, ValueError):
                     pass
 
         avg_latency = round(sum(latencies) / len(latencies), 2) if latencies else 0.0
@@ -71,8 +75,11 @@ async def get_admin_dashboard_stats():
         return {
             "total_scans": total_scans,
             "average_latency_ms": avg_latency,
-            "recent_logs": recent_logs[:10] # Stream the 10 most recent system scans to the UI
+            "recent_logs": recent_logs[:15]  # Streams the 15 most recent real-time system events
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load admin stats: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail=f"Failed to load administrative telemetry data matrix: {str(e)}"
+        )

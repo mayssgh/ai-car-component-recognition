@@ -3,10 +3,9 @@ import {
   StyleSheet, Image, Animated, Alert, ActivityIndicator
 } from 'react-native'
 import { useState, useRef } from 'react'
-import { useRouter } from 'expo-router'
+import { useRouter, useLocalSearchParams } from 'expo-router'
 import { useScanStore } from '../store/scan.store'
 import { useAuthStore } from '../store/auth.store'
-import { historyService } from '../services/history.service'
 import { formatConfidence, getConfidenceColor } from '../utils/formatters'
 import { Colors } from '../constants/colors'
 import api from '../services/api'
@@ -74,22 +73,35 @@ export default function ResultScreen() {
   const router = useRouter()
   const [reporting, setReporting] = useState(false)
 
-  // Fallback mock data for development
-  const scanResult = result?.results?.[0] ?? {
-    component_name: 'Alternator',
-    confidence: 0.962,
-    info: {
+  // CRUCIAL: Intercept passed live parameters dynamically from scan page route
+  const params = useLocalSearchParams()
+  const incomingImageUri = params.imageUri as string | undefined
+  const incomingPartName = params.partName as string | undefined
+  const incomingConfidence = params.confidence as string | undefined
+
+  // Fallback structural mock profile for development descriptions
+  const defaultInfoMap: Record<string, any> = {
+    'Alternator': {
       description: 'The alternator is an electrical generator that converts mechanical energy to electrical energy. In modern vehicles, it charges the battery and powers the electrical system when the engine is running.',
       function: 'Maintains battery charge and powers all onboard electrical systems including ignition, lights, and computers.',
       location: 'Bolted to the engine block, driven by the serpentine belt. Look for a cylindrical metal housing with cooling vents near the front of the engine bay.',
       troubleshooting: 'Dimming headlights or battery warning light on dashboard. Listen for whining or grinding noises while engine is running.',
+    },
+    'Cooling_Fan': {
+      description: 'The cooling fan pulls air through the radiator matrix to dissipate excess core heat from the engine coolant system when the vehicle is stationary or moving slowly.',
+      function: 'Regulates powertrain operating conditions. Prevents catastrophic warping block over-heating cycles.',
+      location: 'Mounted directly behind the front radiator assembly housing grid layout.',
+      troubleshooting: 'Temperature spike warnings while idling at red lights. Complete absence of operating whirring noises when AC is activated.',
     }
   }
 
-  const confidence = scanResult.confidence
-  const confidenceColor = getConfidenceColor(confidence)
-  const confidenceLabel = formatConfidence(confidence)
-  const info = scanResult.info ?? {}
+  // Resolve dynamic names cleanly
+  const activePartName = incomingPartName ?? result?.results?.[0]?.component_name ?? 'Alternator'
+  const info = defaultInfoMap[activePartName] ?? defaultInfoMap['Alternator']
+  
+  // Parse dynamic model percentage numbers safely
+  const confidenceLabel = incomingConfidence ?? formatConfidence(result?.results?.[0]?.confidence ?? 0.95)
+  const confidenceColor = getConfidenceColor(result?.results?.[0]?.confidence ?? 0.95)
 
   const handleReport = async () => {
     if (!result?.scan_id) {
@@ -139,11 +151,11 @@ export default function ResultScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Image */}
+        {/* Hero Image Block */}
         <View style={styles.heroCard}>
-          {result?.image_url ? (
+          {incomingImageUri || result?.image_url ? (
             <Image
-              source={{ uri: result.image_url }}
+              source={{ uri: incomingImageUri || result?.image_url }}
               style={styles.heroImage}
               resizeMode="cover"
             />
@@ -156,20 +168,20 @@ export default function ResultScreen() {
           {/* Confidence Badge */}
           <View style={[styles.confidenceBadge, { borderColor: confidenceColor }]}>
             <Text style={styles.confidenceLabel}>CONFIDENCE</Text>
-            <Text style={[styles.confidenceValue, { color: confidenceColor }]}>
+            <Text style={[styles.confidenceValue, { color: '#ffffff' }]}>
               {confidenceLabel}
             </Text>
           </View>
 
           {/* Component Name Overlay */}
           <View style={styles.heroOverlay}>
-            <Text style={styles.componentName}>{scanResult.component_name}</Text>
+            <Text style={styles.componentName}>{activePartName.replace('_', ' ')}</Text>
             <View style={styles.tagRow}>
               <View style={styles.tagGreen}>
-                <Text style={styles.tagText}>CHARGING SYSTEM</Text>
+                <Text style={styles.tagText}>CORE INFRASTRUCTURE</Text>
               </View>
               <View style={styles.tagBlue}>
-                <Text style={styles.tagText}>VITAL COMPONENT</Text>
+                <Text style={styles.tagText}>LIVE AI METRIC</Text>
               </View>
             </View>
           </View>
@@ -266,12 +278,7 @@ export default function ResultScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#122b2f',
-  },
-
-  // Header
+  container: { flex: 1, backgroundColor: '#122b2f' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -291,22 +298,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backIcon: {
-    fontSize: 18,
-    color: '#b1cbd0',
-  },
-  headerBrand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
+  backIcon: { fontSize: 18, color: '#b1cbd0' },
+  headerBrand: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   headerIcon: { fontSize: 18 },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#b1cbd0',
-    letterSpacing: -0.3,
-  },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: '#b1cbd0', letterSpacing: -0.3 },
   avatar: {
     width: 34,
     height: 34,
@@ -317,20 +312,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#aac7ff',
-  },
-
-  // Scroll
+  avatarText: { fontSize: 14, fontWeight: '600', color: '#aac7ff' },
   scroll: { flex: 1 },
-  scrollContent: {
-    padding: 16,
-    paddingTop: 20,
-  },
-
-  // Hero
+  scrollContent: { padding: 16, paddingTop: 20 },
   heroCard: {
     borderRadius: 16,
     overflow: 'hidden',
@@ -339,20 +323,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(236,236,228,0.1)',
     marginBottom: 16,
   },
-  heroImage: {
-    width: '100%',
-    aspectRatio: 4 / 3,
-  },
-  heroPlaceholder: {
-    width: '100%',
-    aspectRatio: 4 / 3,
-    backgroundColor: '#0e1a1c',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroPlaceholderText: {
-    fontSize: 64,
-  },
+  heroImage: { width: '100%', aspectRatio: 4 / 3 },
+  heroPlaceholder: { width: '100%', aspectRatio: 4 / 3, backgroundColor: '#0e1a1c', alignItems: 'center', justifyContent: 'center' },
+  heroPlaceholderText: { fontSize: 64 },
   confidenceBadge: {
     position: 'absolute',
     top: 12,
@@ -366,57 +339,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  confidenceLabel: {
-    fontSize: 10,
-    fontWeight: '500',
-    letterSpacing: 1,
-    color: '#fff',
-  },
-  confidenceValue: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  heroOverlay: {
-    padding: 16,
-    paddingTop: 12,
-  },
-  componentName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#e5e2dd',
-    marginBottom: 8,
-  },
-  tagRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  tagGreen: {
-    backgroundColor: '#042e1a',
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  tagBlue: {
-    backgroundColor: '#122b2f',
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  tagText: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 1,
-    color: '#6f987c',
-  },
-
-  // Sections
-  sections: {
-    gap: 12,
-    marginBottom: 16,
-  },
-
-  // Accordion
+  confidenceLabel: { fontSize: 10, fontWeight: '500', letterSpacing: 1, color: '#fff' },
+  confidenceValue: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
+  heroOverlay: { padding: 16, paddingTop: 12 },
+  componentName: { fontSize: 24, fontWeight: '700', color: '#e5e2dd', marginBottom: 8 },
+  tagRow: { flexDirection: 'row', gap: 8 },
+  tagGreen: { backgroundColor: '#042e1a', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3 },
+  tagBlue: { backgroundColor: '#122b2f', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3 },
+  tagText: { fontSize: 9, fontWeight: '700', letterSpacing: 1, color: '#6f987c' },
+  sections: { gap: 12, marginBottom: 16 },
   accordion: {
     backgroundColor: 'rgba(45,76,78,0.7)',
     borderRadius: 16,
@@ -424,87 +355,21 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(236,236,228,0.1)',
     overflow: 'hidden',
   },
-  accordionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-  },
-  accordionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  accordionIcon: {
-    fontSize: 18,
-  },
-  accordionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#e5e2dd',
-  },
-  chevron: {
-    fontSize: 18,
-    color: '#8c9293',
-  },
-  accordionBody: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-
-  // Body text
-  bodyText: {
-    fontSize: 14,
-    color: '#c2c7c9',
-    lineHeight: 22,
-  },
-
-  // Bullet list
-  bulletRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
-  },
-  bulletDot: {
-    fontSize: 14,
-    color: '#aac7ff',
-    marginTop: 2,
-  },
-  bulletText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#c2c7c9',
-    lineHeight: 22,
-  },
-
-  // Troubleshooting cards
-  troubleCard: {
-    flexDirection: 'row',
-    backgroundColor: '#1c1c19',
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  troubleBorder: {
-    width: 4,
-    borderLeftWidth: 4,
-  },
-  troubleContent: {
-    flex: 1,
-    padding: 12,
-  },
-  troubleLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  troubleText: {
-    fontSize: 14,
-    color: '#e5e2dd',
-    lineHeight: 20,
-  },
-
-  // Report button
+  accordionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
+  accordionLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  accordionIcon: { fontSize: 18 },
+  accordionTitle: { fontSize: 16, fontWeight: '600', color: '#e5e2dd' },
+  chevron: { fontSize: 18, color: '#8c9293' },
+  accordionBody: { paddingHorizontal: 16, paddingBottom: 16 },
+  bodyText: { fontSize: 14, color: '#c2c7c9', lineHeight: 22 },
+  bulletRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  bulletDot: { fontSize: 14, color: '#aac7ff', marginTop: 2 },
+  bulletText: { flex: 1, fontSize: 14, color: '#c2c7c9', lineHeight: 22 },
+  troubleCard: { flexDirection: 'row', backgroundColor: '#1c1c19', borderRadius: 10, overflow: 'hidden' },
+  troubleBorder: { width: 4, borderLeftWidth: 4 },
+  troubleContent: { flex: 1, padding: 12 },
+  troubleLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 4 },
+  troubleText: { fontSize: 14, color: '#e5e2dd', lineHeight: 20 },
   reportButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -516,13 +381,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(140,146,147,0.3)',
     backgroundColor: 'transparent',
   },
-  reportIcon: {
-    fontSize: 16,
-    color: '#c2c7c9',
-  },
-  reportText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#c2c7c9',
-  },
+  reportIcon: { fontSize: 16, color: '#c2c7c9' },
+  reportText: { fontSize: 15, fontWeight: '600', color: '#c2c7c9' },
 })

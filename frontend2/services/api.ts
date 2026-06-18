@@ -1,23 +1,25 @@
 import axios from 'axios'
-import { Config } from '../constants/config'
-import { supabase } from '../supabase/client'
+import { useAuthStore } from '../store/auth.store'
 
 const api = axios.create({
-  baseURL: Config.API_BASE_URL,
-  timeout: 30000,
+  baseURL: 'http://127.0.0.1:8000',
+  headers: {
+    'Content-Type': 'application/json',
+  },
 })
 
-api.interceptors.request.use(async (config) => {
-  const { data } = await supabase.auth.getSession()
-  const token = data.session?.access_token
-  if (token) config.headers.Authorization = `Bearer ${token}`
-  return config
-})
-
-api.interceptors.response.use(
-  (response) => response,
+// Automatically intercept every outgoing network request and attach the User Token
+api.interceptors.request.use(
+  (config) => {
+    // Access your Zustand store state
+    const token = useAuthStore.getState().token || localStorage.getItem('token')
+    
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
   (error) => {
-    console.error('API Error:', error.response?.data || error.message)
     return Promise.reject(error)
   }
 )

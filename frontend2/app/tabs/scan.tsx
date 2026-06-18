@@ -1,519 +1,130 @@
-import {
-  View, Text, TouchableOpacity, StyleSheet,
-  Image, Animated, Easing, Alert, ActivityIndicator
-} from 'react-native'
-import { useState, useEffect, useRef } from 'react'
+import React, { useState } from 'react'
+import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Platform, ScrollView } from 'react-native'
 import { useRouter } from 'expo-router'
-import { CameraView, useCameraPermissions } from 'expo-camera'
-import { pickImageFromGallery } from '../../utils/imageUtils'
-import { useScan } from '../../hooks/useScan'
-import { useAuthStore } from '../../store/auth.store'
-import { Colors } from '../../constants/colors'
+import * as ImagePicker from 'expo-image-picker'
 
 export default function ScanScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null)
-  const [showCamera, setShowCamera] = useState(false)
-  const [showWarning, setShowWarning] = useState(false)
-  const [permission, requestPermission] = useCameraPermissions()
-  const { scanImage, loading, error } = useScan()
-  const { user } = useAuthStore()
+  const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const cameraRef = useRef<CameraView>(null)
 
-  // Scanning line animation
-  const scanAnim = useRef(new Animated.Value(0)).current
-  // Pulse animation for shutter ring
-  const pulseAnim = useRef(new Animated.Value(1)).current
+  // Pick an image from the device gallery or file explorer
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.9,
+    })
 
-  useEffect(() => {
-    // Scan line loop
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(scanAnim, {
-          toValue: 1, duration: 2000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(scanAnim, {
-          toValue: 0, duration: 2000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    ).start()
-
-    // Pulse loop
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.3, duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1, duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start()
-  }, [])
-  const uploadImage = async (imageUri) => {
-  const formData = new FormData();
-  formData.append('file', {
-    uri: imageUri,
-    name: 'photo.jpg',
-    type: 'image/jpeg',
-  });
-
-  try {
-    const response = await fetch('http://localhost:8000/api/inference/predict', {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    const result = await response.json();
-    console.log("Prediction:", result);
-    // Update your state here to show the component name to the user
-  } catch (error) {
-    console.error("Upload failed:", error);
-  }
-};
-  const scanLineY = scanAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 240],
-  })
-
-  const handleGallery = async () => {
-    const uri = await pickImageFromGallery()
-    if (uri) {
-      setImageUri(uri)
-      setShowCamera(false)
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setImageUri(result.assets[0].uri)
     }
   }
 
-  const handleCapture = async () => {
-    if (showCamera && cameraRef.current) {
-      try {
-        const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 })
-        if (photo?.uri) setImageUri(photo.uri)
-        setShowCamera(false)
-      } catch {
-        Alert.alert('Error', 'Failed to take photo')
-      }
-    } else if (imageUri) {
-      handleScan()
-    } else {
-      if (!permission?.granted) {
-        const result = await requestPermission()
-        if (!result.granted) {
-          Alert.alert('Permission needed', 'Camera access is required to scan components.')
-          return
-        }
-      }
-      setShowCamera(true)
-    }
-  }
-
-  const handleScan = async () => {
+  // Core background multi-part image network delivery stream
+  const handleRecognizeComponent = async () => {
     if (!imageUri) return
+
     try {
-      await scanImage(imageUri)
-      router.push('/result')
-    } catch {
-      setShowWarning(true)
+      setLoading(true)
+      const formData = new FormData()
+
+      if (Platform.OS === 'web') {
+        const response = await fetch(imageUri)
+        const blob = await response.blob()
+        formData.append('file', blob, 'component_capture.jpg')
+      } else {
+        formData.append('file', {
+          uri: imageUri,
+          name: 'component_capture.jpg',
+          type: 'image/jpeg',
+        } as any)
+      }
+
+      // Hit your verified ONNX runtime endpoint route
+      const response = await fetch('http://127.0.0.1:8000/api/inference/predict', {
+        method: 'POST',
+        body: formData,
+        headers: { 'Accept': 'application/json' },
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        // SUCCESS: Route to the results board, passing the local imageUri along!
+        router.push({
+          pathname: '/result',
+          params: {
+            partName: result.component,
+            confidence: result.confidence_percentage,
+            latency: result.server_latency,
+            imageUri: imageUri // <-- Added this key to pass the image along!
+          }
+        })
+      } else {
+        alert(`Inference failed: ${result.detail || 'Unknown server error'}`)
+      }
+    } catch (error) {
+      console.error("Network Link Error:", error)
+      alert("Failed to connect to the AI Inference Server. Ensure your backend is running.")
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <View style={styles.container}>
-
-      {/* Header */}
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.header}>
-        <View style={styles.headerBrand}>
-          <Text style={styles.headerIcon}>📷</Text>
-          <Text style={styles.headerTitle}>BakoVision</Text>
-        </View>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {user?.email?.charAt(0).toUpperCase() ?? 'U'}
-          </Text>
-        </View>
+        <Text style={styles.title}>AI Component Scanner</Text>
+        <Text style={styles.subtitle}>Upload or capture an automotive part for real-time model analysis</Text>
       </View>
 
-      {/* Viewfinder */}
-      <View style={styles.viewfinder}>
-        {showCamera ? (
-          <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
-        ) : imageUri ? (
-          <Image source={{ uri: imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      <View style={styles.previewBox}>
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={styles.previewImage} />
         ) : (
-          <View style={styles.emptyViewfinder}>
-            <Text style={styles.emptyViewfinderText}>
-              Point camera at a car component
-            </Text>
-          </View>
+          <Text style={styles.placeholderText}>No engine component image loaded</Text>
         )}
-
-        {/* Dark tint overlay */}
-        <View style={styles.tint} />
-
-        {/* Quality Warning */}
-        {(showWarning || error) && (
-          <TouchableOpacity
-            style={styles.warningBanner}
-            onPress={() => setShowWarning(false)}
-          >
-            <Text style={styles.warningIcon}>⚠️</Text>
-            <View>
-              <Text style={styles.warningTitle}>Image Quality Warning</Text>
-              <Text style={styles.warningSubtitle}>
-                {error || 'Ensure adequate lighting and focus'}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        )}
-
-        {/* Scan Brackets */}
-        <View style={styles.bracketsContainer}>
-          {/* Corners */}
-          <View style={[styles.bracket, styles.topLeft]} />
-          <View style={[styles.bracket, styles.topRight]} />
-          <View style={[styles.bracket, styles.bottomLeft]} />
-          <View style={[styles.bracket, styles.bottomRight]} />
-
-          {/* Animated scan line */}
-          <Animated.View
-            style={[
-              styles.scanLine,
-              { transform: [{ translateY: scanLineY }] }
-            ]}
-          />
-
-          {/* Tech telemetry */}
-          <View style={styles.telemetry}>
-            <View style={styles.telemetryItem}>
-              <Text style={styles.telemetryLabel}>STATUS</Text>
-              <Text style={styles.telemetryValue}>
-                {loading ? 'SCANNING' : showCamera ? 'LIVE' : imageUri ? 'READY' : 'STANDBY'}
-              </Text>
-            </View>
-            <View style={styles.telemetryItem}>
-              <Text style={styles.telemetryLabel}>MODE</Text>
-              <Text style={styles.telemetryValue}>AI·DETECT</Text>
-            </View>
-          </View>
-        </View>
       </View>
 
-      {/* Controls */}
-      <View style={styles.controls}>
-
-        {/* Gallery Button */}
-        <TouchableOpacity style={styles.sideButton} onPress={handleGallery}>
-          <Text style={styles.sideButtonIcon}>🖼️</Text>
+      <View style={styles.actionGroup}>
+        <TouchableOpacity style={styles.secondaryBtn} onPress={pickImage} disabled={loading}>
+          <Text style={styles.secondaryBtnText}>Select Image File</Text>
         </TouchableOpacity>
 
-        {/* Shutter */}
-        <View style={styles.shutterContainer}>
-          <Animated.View
-            style={[
-              styles.shutterRing,
-              { transform: [{ scale: pulseAnim }] }
-            ]}
-          />
-          <TouchableOpacity
-            style={styles.shutter}
-            onPress={handleCapture}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" size="large" />
-            ) : (
-              <View style={styles.shutterInner}>
-                <Text style={styles.shutterIcon}>
-                  {showCamera ? '📸' : imageUri ? '🔍' : '⊙'}
-                </Text>
-              </View>
-            )}
+        {imageUri && (
+          <TouchableOpacity style={styles.primaryBtn} onPress={handleRecognizeComponent} disabled={loading}>
+            {loading ? <ActivityIndicator color="#ecece4" /> : <Text style={styles.primaryBtnText}>Analyze Component</Text>}
           </TouchableOpacity>
-        </View>
-
-        {/* Flash / Reset */}
-        <TouchableOpacity
-          style={styles.sideButton}
-          onPress={() => {
-            setImageUri(null)
-            setShowCamera(false)
-            setShowWarning(false)
-          }}
-        >
-          <Text style={styles.sideButtonIcon}>✕</Text>
-        </TouchableOpacity>
+        )}
       </View>
-
-      {/* Hint text */}
-      <Text style={styles.hint}>
-        {showCamera
-          ? 'Tap shutter to capture'
-          : imageUri
-          ? 'Tap scan to analyze component'
-          : 'Tap shutter to open camera or select from gallery'}
-      </Text>
-
-    </View>
+    </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#122b2f',
-  },
-
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 52,
-    paddingBottom: 12,
-    backgroundColor: '#20201d',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(66,72,73,0.2)',
-    zIndex: 10,
-  },
-  headerBrand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerIcon: {
-    fontSize: 20,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#b1cbd0',
-    letterSpacing: -0.3,
-  },
-  avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#2d4c4e',
-    borderWidth: 1,
-    borderColor: 'rgba(177,203,208,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#b1cbd0',
-  },
-
-  // Viewfinder
-  viewfinder: {
-    flex: 1,
-    position: 'relative',
+  container: { flex: 1, backgroundColor: '#1c1c19' },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 50, paddingBottom: 40, alignItems: 'center' },
+  header: { marginBottom: 30, width: '100%' },
+  title: { fontSize: 24, fontWeight: '700', color: '#ecece4', textAlign: 'center' },
+  subtitle: { fontSize: 13, color: '#8c9293', marginTop: 6, textAlign: 'center', lineHeight: 18 },
+  previewBox: { 
+    width: '100%', 
+    aspectRatio: 4 / 3, 
+    backgroundColor: '#20201d', 
+    borderRadius: 16, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    borderWidth: 1, 
+    borderColor: 'rgba(236,236,228,0.06)', 
     overflow: 'hidden',
+    marginBottom: 30 
   },
-  emptyViewfinder: {
-    flex: 1,
-    backgroundColor: '#0e1a1c',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyViewfinderText: {
-    color: 'rgba(194,199,201,0.3)',
-    fontSize: 14,
-    letterSpacing: 0.5,
-  },
-  tint: {
-  ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(18, 43, 47, 0.15)',
-  },
-
-  // Warning
-  warningBanner: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    right: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(45, 76, 78, 0.9)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(170,199,255,0.2)',
-    padding: 12,
-    zIndex: 20,
-  },
-  warningIcon: {
-    fontSize: 20,
-  },
-  warningTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#e5e2dd',
-  },
-  warningSubtitle: {
-    fontSize: 11,
-    color: '#c2c7c9',
-    marginTop: 2,
-  },
-
-  // Brackets
-  bracketsContainer: {
-    ...StyleSheet.absoluteFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bracket: {
-    position: 'absolute',
-    width: 40,
-    height: 40,
-    borderColor: 'rgba(170,199,255,0.6)',
-    borderWidth: 3,
-  },
-  topLeft: {
-    top: '20%',
-    left: '10%',
-    borderRightWidth: 0,
-    borderBottomWidth: 0,
-    borderTopLeftRadius: 8,
-  },
-  topRight: {
-    top: '20%',
-    right: '10%',
-    borderLeftWidth: 0,
-    borderBottomWidth: 0,
-    borderTopRightRadius: 8,
-  },
-  bottomLeft: {
-    bottom: '20%',
-    left: '10%',
-    borderRightWidth: 0,
-    borderTopWidth: 0,
-    borderBottomLeftRadius: 8,
-  },
-  bottomRight: {
-    bottom: '20%',
-    right: '10%',
-    borderLeftWidth: 0,
-    borderTopWidth: 0,
-    borderBottomRightRadius: 8,
-  },
-  scanLine: {
-    position: 'absolute',
-    left: '10%',
-    right: '10%',
-    height: 2,
-    backgroundColor: '#aac7ff',
-    shadowColor: '#aac7ff',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 8,
-    elevation: 5,
-    top: '20%',
-  },
-
-  // Telemetry
-  telemetry: {
-    position: 'absolute',
-    bottom: '18%',
-    right: 16,
-    gap: 8,
-  },
-  telemetryItem: {
-    alignItems: 'flex-end',
-  },
-  telemetryLabel: {
-    fontSize: 9,
-    color: 'rgba(170,199,255,0.5)',
-    letterSpacing: 1,
-  },
-  telemetryValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#aac7ff',
-    letterSpacing: 0.5,
-  },
-
-  // Controls
-  controls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 40,
-    paddingVertical: 20,
-    backgroundColor: '#1c1c19',
-  },
-  sideButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(45, 76, 78, 0.7)',
-    borderWidth: 1,
-    borderColor: 'rgba(236, 236, 228, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sideButtonIcon: {
-    fontSize: 20,
-  },
-  shutterContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  shutterRing: {
-    position: 'absolute',
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    borderWidth: 1,
-    borderColor: 'rgba(170,199,255,0.3)',
-  },
-  shutter: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#004792',
-    borderWidth: 4,
-    borderColor: '#1c1c19',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#2a5fab',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 10,
-  },
-  shutterInner: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  shutterIcon: {
-    fontSize: 24,
-  },
-
-  // Hint
-  hint: {
-    textAlign: 'center',
-    fontSize: 11,
-    color: 'rgba(194,199,201,0.5)',
-    letterSpacing: 0.5,
-    paddingVertical: 8,
-    backgroundColor: '#1c1c19',
-    paddingBottom: 12,
-  },
+  previewImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  placeholderText: { color: '#8c9293', fontSize: 14 },
+  actionGroup: { width: '100%', gap: 14 },
+  primaryBtn: { backgroundColor: '#2a5fab', borderRadius: 12, paddingVertical: 16, alignItems: 'center' },
+  primaryBtnText: { color: '#ecece4', fontSize: 16, fontWeight: '700' },
+  secondaryBtn: { backgroundColor: '#2d4c4e', borderRadius: 12, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(230,232,231,0.1)' },
+  secondaryBtnText: { color: '#ecece4', fontSize: 16, fontWeight: '600' }
 })

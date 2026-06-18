@@ -1,7 +1,7 @@
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
-  ScrollView, ActivityIndicator,
+  ScrollView, ActivityIndicator
 } from 'react-native'
 import { useState } from 'react'
 import { useRouter } from 'expo-router'
@@ -61,7 +61,7 @@ export default function LoginScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="engineer@bakovision.ai"
-                placeholderTextColor={Colors.dark.subtext}
+                placeholderTextColor={Colors.dark?.subtext || '#8c9293'}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -83,7 +83,7 @@ export default function LoginScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="••••••••••••"
-                placeholderTextColor={Colors.dark.subtext}
+                placeholderTextColor={Colors.dark?.subtext || '#8c9293'}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -103,7 +103,7 @@ export default function LoginScreen() {
             activeOpacity={0.85}
           >
             {loading ? (
-              <ActivityIndicator color={Colors.dark.text} />
+              <ActivityIndicator color={Colors.dark?.text || '#ecece4'} />
             ) : (
               <Text style={styles.primaryButtonText}>Sign In →</Text>
             )}
@@ -120,10 +120,22 @@ export default function LoginScreen() {
           <TouchableOpacity
             style={styles.secondaryButton}
             onPress={() => router.push('/auth/register')}
+            activeOpacity={0.7}
           >
             <Text style={styles.secondaryButtonText}>
               Don't have an account?{' '}
               <Text style={styles.linkText}>Register</Text>
+            </Text>
+          </TouchableOpacity>
+
+          {/* Administrative Gateway Link */}
+          <TouchableOpacity
+            style={styles.adminButton}
+            onPress={() => router.push('/admin/login')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.adminButtonText}>
+              Access Administrative Console Gate
             </Text>
           </TouchableOpacity>
 
@@ -155,8 +167,6 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingVertical: 48,
   },
-
-  // Background blobs
   blobTopRight: {
     position: 'absolute',
     top: -100,
@@ -175,8 +185,6 @@ const styles = StyleSheet.create({
     borderRadius: 125,
     backgroundColor: 'rgba(166, 209, 179, 0.04)',
   },
-
-  // Brand
   brandSection: {
     alignItems: 'center',
     marginBottom: 32,
@@ -207,8 +215,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: 'rgba(194, 199, 201, 0.8)',
   },
-
-  // Card
   card: {
     width: '100%',
     maxWidth: 440,
@@ -218,8 +224,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(236, 236, 228, 0.1)',
     padding: 32,
   },
-
-  // Fields
   fieldGroup: {
     marginBottom: 16,
   },
@@ -255,17 +259,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#d4d1cc',
     letterSpacing: 0.5,
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+      },
+    }),
   },
-
-  // Error
   error: {
-    color: Colors.danger,
+    color: Colors.danger || '#ff6b6b',
     fontSize: 13,
     marginBottom: 12,
     textAlign: 'center',
   },
-
-  // Buttons
   primaryButton: {
     backgroundColor: '#2a5fab',
     borderRadius: 12,
@@ -283,8 +288,6 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.6,
   },
-
-  // Divider
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -302,10 +305,9 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     color: '#c2c7c9',
   },
-
-  // Secondary
   secondaryButton: {
     alignItems: 'center',
+    marginBottom: 16,
   },
   secondaryButtonText: {
     fontSize: 14,
@@ -315,8 +317,20 @@ const styles = StyleSheet.create({
     color: '#2a5fab',
     fontWeight: '600',
   },
-
-  // Footer
+  adminButton: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(236, 236, 228, 0.08)',
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  adminButtonText: {
+    fontSize: 13,
+    color: '#8c9293',
+    fontWeight: '500',
+    textDecorationLine: 'underline',
+  },
   footer: {
     marginTop: 32,
     alignItems: 'center',
