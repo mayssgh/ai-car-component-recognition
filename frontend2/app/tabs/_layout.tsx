@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { Platform } from 'react-native'
-
+import { FontAwesome } from '@expo/vector-icons';
 // 🌟 SMART LOOKUP MATRIX: Prevents duplicate anonymous function evaluations on every frame render
 const TAB_ICONS: Record<string, { active: keyof typeof Ionicons.mappings; inactive: keyof typeof Ionicons.mappings }> = {
   scan: { active: 'scan', inactive: 'scan-outline' },
@@ -71,8 +71,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          title: 'History',
-          tabBarIcon: renderTabBarIcon('history'),
+          title: 'Analytics',
+          tabBarIcon: ({ color, size }) => (
+      <FontAwesome name="bar-chart" size={size ?? 22} color={color} />
+    ),
         }}
       />
       <Tabs.Screen
