@@ -1,7 +1,7 @@
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
-  ScrollView, ActivityIndicator
+  ScrollView, ActivityIndicator, Image
 } from 'react-native'
 import { useState } from 'react'
 import { useRouter } from 'expo-router'
@@ -60,9 +60,11 @@ export default function RegisterScreen() {
 
         {/* Brand */}
         <View style={styles.brandSection}>
-          <View style={styles.logoBox}>
-            <Text style={styles.logoIcon}>📷</Text>
-          </View>
+          <Image 
+            source={require('../../assets/bako_logo.png')} // 🌟 FIXED: Stepped out two directories to root
+            style={styles.logoImage} 
+            resizeMode="contain"
+          />
           <Text style={styles.brandName}>BakoVision</Text>
           <Text style={styles.brandTagline}>Next-gen Automotive Intelligence</Text>
         </View>
@@ -192,8 +194,6 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingVertical: 48,
   },
-
-  // Blobs
   blobTopLeft: {
     position: 'absolute',
     top: -80,
@@ -212,28 +212,16 @@ const styles = StyleSheet.create({
     borderRadius: 140,
     backgroundColor: 'rgba(4, 46, 26, 0.15)',
   },
-
-  // Brand
   brandSection: {
     alignItems: 'center',
     marginBottom: 32,
   },
-  logoBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    backgroundColor: '#2a5fab',
-    alignItems: 'center',
-    justifyContent: 'center',
+  // 🌟 FIXED: Added style properties for your logo image
+  logoImage: {
+    width: 100,
+    height: 100,
     marginBottom: 16,
-    shadowColor: '#2a5fab',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  logoIcon: {
-    fontSize: 28,
+    alignSelf: 'center',
   },
   brandName: {
     fontSize: 36,
@@ -247,8 +235,6 @@ const styles = StyleSheet.create({
     color: 'rgba(194, 199, 201, 0.8)',
     letterSpacing: 0.5,
   },
-
-  // Card
   card: {
     width: '100%',
     maxWidth: 480,
@@ -271,8 +257,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#c2c7c9',
   },
-
-  // Fields
   fieldGroup: {
     marginBottom: 16,
   },
@@ -297,16 +281,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#e5e2dd',
   },
-
-  // Error
   error: {
     color: Colors.danger,
     fontSize: 13,
     marginBottom: 12,
     textAlign: 'center',
   },
-
-  // Button
   primaryButton: {
     backgroundColor: '#2a5fab',
     borderRadius: 12,
@@ -329,8 +309,6 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.6,
   },
-
-  // Divider
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -348,8 +326,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     color: 'rgba(194, 199, 201, 0.4)',
   },
-
-  // Login link
   loginLink: {
     alignItems: 'center',
   },

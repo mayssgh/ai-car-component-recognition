@@ -1,7 +1,7 @@
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
-  ScrollView, ActivityIndicator
+  ScrollView, ActivityIndicator, Image
 } from 'react-native'
 import { useState } from 'react'
 import { useRouter } from 'expo-router'
@@ -43,13 +43,15 @@ export default function LoginScreen() {
         <View style={styles.blobBottomLeft} />
 
         {/* Brand */}
-        <View style={styles.brandSection}>
-          <View style={styles.logoBox}>
-            <Text style={styles.logoIcon}>📷</Text>
-          </View>
-          <Text style={styles.brandName}>BakoVision</Text>
-          <Text style={styles.brandTagline}>AI Component Intelligence</Text>
-        </View>
+                <View style={styles.brandSection}>
+                  <Image 
+                    source={require('../../assets/bako_logo.png')} // 🌟 FIXED: Stepped out two directories to root
+                    style={styles.logoImage} 
+                    resizeMode="contain"
+                  />
+                  <Text style={styles.brandName}>BakoVision</Text>
+                  <Text style={styles.brandTagline}>Next-gen Automotive Intelligence</Text>
+                </View>
 
         {/* Card */}
         <View style={styles.card}>
