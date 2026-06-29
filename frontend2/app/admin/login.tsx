@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native'
 import { useRouter } from 'expo-router'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 export default function AdminLoginScreen() {
   const [email, setEmail] = useState('')
@@ -27,6 +28,12 @@ export default function AdminLoginScreen() {
       const data = await response.json()
       
       if (response.status === 200) {
+        // SAVING THE TOKEN: Fixes the 401 Unauthorized issue down the line
+        if (data.access_token) {
+          await AsyncStorage.setItem('userToken', data.access_token)
+        } else if (data.token) {
+          await AsyncStorage.setItem('userToken', data.token)
+        }
         router.replace('/admin/dashboard')
       } else {
         setError(data.detail || 'Access Denied')
@@ -41,7 +48,16 @@ export default function AdminLoginScreen() {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>System Control Terminal</Text>
+        
+        {/* BRANDING LOGO: Centered at the top of the terminal login */}
+        <View style={styles.logoContainer}>
+          <Image 
+            source={require('../../assets/bako_logo.png')} // Adjust relative path if your assets folder structure is different
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.subtitle}>System Control Terminal</Text>
+        </View>
         
         {error && <Text style={styles.error}>{error}</Text>}
         
@@ -81,7 +97,9 @@ export default function AdminLoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1c1c19' },
   scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 },
-  title: { fontSize: 22, fontWeight: '700', color: '#ecece4', marginBottom: 30, textAlign: 'center' },
+  logoContainer: { alignItems: 'center', marginBottom: 35 },
+  logo: { width: 220, height: 75, marginBottom: 10 },
+  subtitle: { fontSize: 14, fontWeight: '500', color: '#8c9293', letterSpacing: 0.5 },
   fieldGroup: { marginBottom: 20 },
   label: { fontSize: 11, fontWeight: '600', color: '#c2c7c9', marginBottom: 8, letterSpacing: 1 },
   input: { 

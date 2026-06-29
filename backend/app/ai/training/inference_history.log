@@ -1,3 +1,15 @@
 [2026-06-17 16:09:51] Predicted: Cooling_Fan | Confidence: 99.66% | File: 3.jpeg
 [2026-06-17 16:17:51] Predicted: Brake_Component    | Latency: 28.49ms | File: images (11).jpg
 [2026-06-18 13:50:53] Predicted: Brake_Component    | Latency: 356.19ms | File: component_capture.jpg
+[2026-06-18 18:46:55] Predicted: Brake_Component    | Latency: 136.54ms | File: component_capture.jpg
+[2026-06-18 18:47:10] Predicted: Brake_Component    | Latency: 14.90ms | File: component_capture.jpg
+[2026-06-18 18:47:40] Predicted: Motor_Controller   | Latency: 43.71ms | File: component_capture.jpg
+[2026-06-18 18:53:22] Predicted: Brake_Component    | Latency: 14.33ms | File: component_capture.jpg
+[2026-06-18 18:59:26] Predicted: Brake_Component    | Latency: 14.96ms | File: component_capture.jpg
+[2026-06-18 19:03:46] Predicted: Brake_Component    | Latency: 13.27ms | File: component_capture.jpg
+[2026-06-18 21:27:05] Predicted: Motor_Controller   | Latency: 383.00ms | File: component_capture.jpg
+[2026-06-23 14:05:26] Predicted: Brake_Component    | Latency: 373.21ms | File: component_capture.jpg
+[2026-06-25 13:24:01] Predicted: Brake_Component    | Latency: 1018.21ms | File: component_capture.jpg
+[2026-06-25 13:41:59] Predicted: Brake_Component    | Latency: 26.21ms | File: component_capture.jpg
+[2026-06-28 22:39:44] Predicted: Brake_Component    | Latency: 924.02ms | File: component_capture.jpg
+[2026-06-29 10:12:10] Predicted: Brake_Component    | Latency: 451.43ms | File: component_capture.jpg

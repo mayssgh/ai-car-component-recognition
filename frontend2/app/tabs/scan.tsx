@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Platform, ScrollView } from 'react-native'
+import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Platform, ScrollView, Alert } from 'react-native'
 import { useRouter } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
 
@@ -8,20 +8,66 @@ export default function ScanScreen() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  // Pick an image from the device gallery or file explorer
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.9,
-    })
+  // Smart environment cross-platform IP routing configuration
+  const getBackendURL = () => {
+    if (Platform.OS === 'android') return 'http://10.0.2.2:8000'
+    return 'http://127.0.0.1:8000'
+  }
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setImageUri(result.assets[0].uri)
+  // Safe lens engine configuration block
+  const captureFromCamera = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync()
+
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Rejected', 'App context requires native lens permissions to snap parts.')
+        return
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      })
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setImageUri(result.assets[0].uri)
+      }
+    } catch (error) {
+      console.error("Camera module boot aborted:", error)
+      Alert.alert(
+        "Hardware Lens Error", 
+        "If you are on a computer emulator, please use the gallery option instead!"
+      )
     }
   }
 
-  // Core background multi-part image network delivery stream
+  // Modernized photo album data picker block
+  const pickFromGallery = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync()
+
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Rejected', 'Media library access is required to view saved captures.')
+        return
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      })
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setImageUri(result.assets[0].uri)
+      }
+    } catch (error) {
+      console.error("Gallery frame allocation failed:", error)
+      Alert.alert("Gallery Error", "Could not safely open the system photos picker.")
+    }
+  }
+
+  // Multi-part payload server delivery sequence
   const handleRecognizeComponent = async () => {
     if (!imageUri) return
 
@@ -41,8 +87,7 @@ export default function ScanScreen() {
         } as any)
       }
 
-      // Hit your verified ONNX runtime endpoint route
-      const response = await fetch('http://127.0.0.1:8000/api/inference/predict', {
+      const response = await fetch(`${getBackendURL()}/api/inference/predict`, {
         method: 'POST',
         body: formData,
         headers: { 'Accept': 'application/json' },
@@ -51,22 +96,24 @@ export default function ScanScreen() {
       const result = await response.json()
 
       if (response.ok) {
-        // SUCCESS: Route to the results board, passing the local imageUri along!
         router.push({
           pathname: '/result',
           params: {
             partName: result.component,
             confidence: result.confidence_percentage,
             latency: result.server_latency,
-            imageUri: imageUri // <-- Added this key to pass the image along!
+            imageUri: imageUri 
           }
         })
       } else {
-        alert(`Inference failed: ${result.detail || 'Unknown server error'}`)
+        Alert.alert("Inference Failed", result.detail || 'Unknown server database parsing issue.')
       }
     } catch (error) {
-      console.error("Network Link Error:", error)
-      alert("Failed to connect to the AI Inference Server. Ensure your backend is running.")
+      console.error("Network Connection Failure:", error)
+      Alert.alert(
+        "Server Connection Lost", 
+        "Failed to touch the AI engine. Verify your Python backend dashboard server is active."
+      )
     } finally {
       setLoading(false)
     }
@@ -88,13 +135,22 @@ export default function ScanScreen() {
       </View>
 
       <View style={styles.actionGroup}>
-        <TouchableOpacity style={styles.secondaryBtn} onPress={pickImage} disabled={loading}>
-          <Text style={styles.secondaryBtnText}>Select Image File</Text>
-        </TouchableOpacity>
+        {/* Two dedicated direct input management buttons row */}
+        <View style={styles.rowButtons}>
+          <TouchableOpacity style={[styles.choiceBtn, styles.cameraBtn]} onPress={captureFromCamera} disabled={loading}>
+            <Text style={styles.btnIcon}>📸</Text>
+            <Text style={styles.choiceBtnText}>Take Photo</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.choiceBtn, styles.galleryBtn]} onPress={pickFromGallery} disabled={loading}>
+            <Text style={styles.btnIcon}>📁</Text>
+            <Text style={styles.choiceBtnText}>Open Gallery</Text>
+          </TouchableOpacity>
+        </View>
 
         {imageUri && (
           <TouchableOpacity style={styles.primaryBtn} onPress={handleRecognizeComponent} disabled={loading}>
-            {loading ? <ActivityIndicator color="#ecece4" /> : <Text style={styles.primaryBtnText}>Analyze Component</Text>}
+            {loading ? <ActivityIndicator color="#ecece4" /> : <Text style={styles.primaryBtnText}>Analyze Component ➔</Text>}
           </TouchableOpacity>
         )}
       </View>
@@ -122,9 +178,13 @@ const styles = StyleSheet.create({
   },
   previewImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   placeholderText: { color: '#8c9293', fontSize: 14 },
-  actionGroup: { width: '100%', gap: 14 },
-  primaryBtn: { backgroundColor: '#2a5fab', borderRadius: 12, paddingVertical: 16, alignItems: 'center' },
-  primaryBtnText: { color: '#ecece4', fontSize: 16, fontWeight: '700' },
-  secondaryBtn: { backgroundColor: '#2d4c4e', borderRadius: 12, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(230,232,231,0.1)' },
-  secondaryBtnText: { color: '#ecece4', fontSize: 16, fontWeight: '600' }
+  actionGroup: { width: '100%', gap: 16 },
+  rowButtons: { flexDirection: 'row', width: '100%', gap: 12 },
+  choiceBtn: { flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, flexDirection: 'row', gap: 6 },
+  cameraBtn: { backgroundColor: '#2d4c4e', borderColor: 'rgba(230,232,231,0.1)' },
+  galleryBtn: { backgroundColor: '#20201d', borderColor: 'rgba(236,236,228,0.1)' },
+  btnIcon: { fontSize: 16 },
+  choiceBtnText: { color: '#ecece4', fontSize: 14, fontWeight: '600' },
+  primaryBtn: { backgroundColor: '#2a5fab', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 4 },
+  primaryBtnText: { color: '#ecece4', fontSize: 16, fontWeight: '700' }
 })
